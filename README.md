@@ -4,7 +4,6 @@ A full-stack web application for creating personalized study plans and tracking 
 
 **🔗[Live Demo](https://ai-study-planner-frontend.onrender.com)** 
 
-📦 GitHub Repository: https://github.com/Harshal-Bsys27/ai-study-planner
 > ⚠️ Note: The application may take up to **30–60 seconds** to load on first visit due to free hosting (cold start on Render).
 
 ---
@@ -318,5 +317,6 @@ For issues and questions:
 
 Made with dedication by Harshal Bsys27
 <!-- Pair programming commit -->
+
 
 
