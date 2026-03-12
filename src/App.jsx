@@ -1,9 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-  AppBar,
-  Toolbar,
   Typography,
-  Container,
   Grid,
   Card,
   CardContent,
@@ -33,6 +30,9 @@ import {
   AccordionSummary,
   AccordionDetails,
   Divider,
+  Avatar,
+  IconButton,
+  Badge,
 } from "@mui/material";
 
 import {
@@ -40,8 +40,9 @@ import {
   Pie,
   Cell,
   Tooltip,
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
+  CartesianGrid,
   XAxis,
   YAxis,
   ResponsiveContainer,
@@ -53,18 +54,27 @@ import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
 import StopIcon from "@mui/icons-material/Stop";
+import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
+import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
+import EventNoteRoundedIcon from "@mui/icons-material/EventNoteRounded";
+import AutoGraphRoundedIcon from "@mui/icons-material/AutoGraphRounded";
+import TimerRoundedIcon from "@mui/icons-material/TimerRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
+import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
+import SchoolRoundedIcon from "@mui/icons-material/SchoolRounded";
 
 import Auth from "./pages/Auth";
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 
 const COLORS = {
-  ahead: "#10B981",
+  ahead: "#22C55E",
   track: "#F59E0B",
   behind: "#EF4444",
-  primary: "#0F766E",
-  secondary: "#06B6D4",
-  bg: "#F8FAFC",
+  primary: "#4F8CFF",
+  secondary: "#22D3EE",
+  bg: "#0B1B3A",
   cardBg: "#FFFFFF",
 };
 
@@ -249,6 +259,7 @@ const SUBJECTS_DB = {
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserName, setCurrentUserName] = useState("Learner");
   const [subject, setSubject] = useState("DSA");
   const [days, setDays] = useState(3);
   const [hours, setHours] = useState(2);
@@ -269,6 +280,12 @@ function App() {
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [studyHistory, setStudyHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [analysisTrack, setAnalysisTrack] = useState("Software Engineer");
+  const [examDate, setExamDate] = useState("");
+  const homeRef = useRef(null);
+  const plannerRef = useRef(null);
+  const analyticsRef = useRef(null);
+  const timerRef = useRef(null);
 
   // Helper functions for user-specific storage
   const getCustomSubjectsKey = (userId) => `customSubjects_${userId}`;
@@ -281,6 +298,7 @@ function App() {
     if (token && user) {
       const userData = JSON.parse(user);
       setCurrentUserId(userData.id);
+      setCurrentUserName(userData.username || "Learner");
       setIsAuthenticated(true);
       
       // Load user-specific custom subjects
@@ -333,6 +351,7 @@ function App() {
     localStorage.removeItem('user');
     setIsAuthenticated(false);
     setCurrentUserId(null);
+    setCurrentUserName("Learner");
     setPlan([]);
     setStudyHistory([]);
     setCustomSubjects({});
@@ -341,6 +360,19 @@ function App() {
   // Show snackbar
   const showSnackbar = (message, type = 'success') => {
     setSnackbar({ open: true, message, type });
+  };
+
+  const scrollToSection = (ref, fallbackMessage) => {
+    if (ref?.current) {
+      ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (fallbackMessage) {
+      showSnackbar(fallbackMessage, "info");
+    }
+    if (plannerRef.current) {
+      plannerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   // Format timer
@@ -386,7 +418,7 @@ function App() {
     setCustomSubjectName("");
     setCustomTopics({ Beginner: "", Intermediate: "", Advanced: "" });
     setCustomLevelTab(0);
-    showSnackbar(`✨ Custom subject "${customSubjectName}" created!`);
+    showSnackbar(`Custom subject "${customSubjectName}" created.`);
   };
 
   const allSubjects = { ...SUBJECTS_DB, ...customSubjects };
@@ -450,7 +482,7 @@ function App() {
       };
       setStudyHistory([historyEntry, ...studyHistory]);
 
-      showSnackbar('✅ Study plan generated successfully!');
+      showSnackbar('Study plan generated successfully!');
     } catch (error) {
       console.error('Error:', error);
       showSnackbar('Error generating plan', 'error');
@@ -466,11 +498,11 @@ function App() {
       !updated[dayIndex].topics[subIndex].completed;
 
     try {
-     await fetch(`${API_URL}/api/plans/1/progress`, {
+      await fetch(`${API_URL}/api/plans/1/progress`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${getToken()}`
+          "Authorization": `Bearer ${getToken()}`,
         },
         body: JSON.stringify({
           day: dayIndex + 1,
@@ -480,10 +512,12 @@ function App() {
       });
 
       setPlan(updated);
-      const action = updated[dayIndex].topics[subIndex].completed ? 'completed' : 'uncompleted';
-      showSnackbar(`✅ Topic ${action}!`);
+      const action = updated[dayIndex].topics[subIndex].completed
+        ? "completed"
+        : "uncompleted";
+      showSnackbar(`Topic ${action}!`);
     } catch (error) {
-      showSnackbar('Error updating progress', 'error');
+      showSnackbar("Error updating progress", "error");
     }
   };
 
@@ -525,7 +559,7 @@ function App() {
     },
   ];
 
-  const totalProgress = pieData[0].value + pieData[1].value > 0 
+  const totalProgress = pieData[0].value + pieData[1].value > 0
     ? Math.round((pieData[0].value / (pieData[0].value + pieData[1].value)) * 100)
     : 0;
 
@@ -535,296 +569,580 @@ function App() {
   }
 
   const currentSubjectData = allSubjects[subject];
+  const totalTopics = plan.reduce((sum, day) => sum + (day.topics?.length || 0), 0);
+  const completedTopics = plan.reduce(
+    (sum, day) => sum + day.topics.filter((topic) => topic.completed).length,
+    0
+  );
+  const productivityScore = totalTopics
+    ? Math.round((completedTopics / totalTopics) * 100)
+    : 0;
+  const plannedHours = plan.reduce(
+    (sum, day) =>
+      sum +
+      day.topics.reduce((topicSum, topic) => topicSum + Number(topic.hours || 0), 0),
+    0
+  );
+  const displayHours = plannedHours > 0 ? plannedHours : days * hours;
+  const upcomingTopics = plan.flatMap((day) =>
+    day.topics.map((topic) => ({ day: day.day, name: topic.name }))
+  ).slice(0, 3);
+  const timeSlots = ["3:00 PM", "5:00 PM", "7:00 PM"];
+  const planPalette = [
+    { bg: "rgba(59, 130, 246, 0.16)", color: "#2563eb" },
+    { bg: "rgba(239, 68, 68, 0.16)", color: "#dc2626" },
+    { bg: "rgba(16, 185, 129, 0.18)", color: "#059669" },
+  ];
+  const missingSkills = currentSubjectData?.[level]?.slice(0, 3) || [];
+  const greeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  })();
 
   // ===============================
   // UI
   // ===============================
   return (
-    <Box sx={{ background: COLORS.bg, minHeight: "100vh" }}>
-      {/* NAVBAR */}
-      <AppBar position="sticky" sx={{ background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondary})`, boxShadow: "0 4px 20px rgba(15, 118, 110, 0.15)" }}>
-        <Toolbar>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
-              📚 AI Study Planner
-            </Typography>
-          </Box>
-          <Button
-            color="inherit"
+    <Box className="app-shell">
+      <Box className="app-frame">
+      <Box className="app-sidebar">
+        <Box className="sidebar-brand">
+          <SchoolRoundedIcon fontSize="small" />
+        </Box>
+        <Box className="nav-group" sx={{ mt: "auto" }}>
+          <IconButton className="nav-btn active" onClick={() => scrollToSection(homeRef)}>
+            <HomeRoundedIcon fontSize="small" />
+          </IconButton>
+          <IconButton className="nav-btn" onClick={() => scrollToSection(plannerRef)}>
+            <EventNoteRoundedIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            className="nav-btn"
+            onClick={() => scrollToSection(analyticsRef, "Generate a plan to see analytics.")}
+          >
+            <AutoGraphRoundedIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            className="nav-btn"
+            onClick={() => scrollToSection(timerRef, "Generate a plan to use the timer.")}
+          >
+            <TimerRoundedIcon fontSize="small" />
+          </IconButton>
+        </Box>
+        <Box className="nav-group">
+          <IconButton
+            className="nav-btn"
             onClick={() => setShowHistory(!showHistory)}
-            sx={{ textTransform: "capitalize", "&:hover": { background: "rgba(255,255,255,0.1)" }, mr: 1 }}
           >
-            📋 History
-          </Button>
-          <Button
-            color="inherit"
-            onClick={handleLogout}
-            sx={{ textTransform: "capitalize", "&:hover": { background: "rgba(255,255,255,0.1)" } }}
-          >
-            🚪 Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
+            <HistoryRoundedIcon fontSize="small" />
+          </IconButton>
+          <IconButton className="nav-btn" onClick={handleLogout}>
+            <SettingsRoundedIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </Box>
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* STUDY HISTORY PANEL */}
-        {showHistory && (
-          <Card sx={{ mb: 3, borderRadius: 3, background: "#F0F9FF", border: `2px solid ${COLORS.secondary}` }}>
-            <CardContent>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  📚 Your Study History
-                </Typography>
-                <Button size="small" onClick={() => setShowHistory(false)}>Close</Button>
-              </Box>
-              <Divider sx={{ mb: 2 }} />
-              {studyHistory.length === 0 ? (
-                <Typography color="textSecondary">No study history yet. Start planning!</Typography>
-              ) : (
-                <List>
-                  {studyHistory.map((entry) => (
-                    <ListItem key={entry.id} sx={{ borderBottom: "1px solid #E2E8F0", "&:last-child": { borderBottom: "none" } }}>
-                      <ListItemText
-                        primary={`${allSubjects[entry.subject]?.emoji} ${entry.subject} - ${entry.level}`}
-                        secondary={`📅 ${entry.createdAt} | ⏱️ ${entry.days} days × ${entry.hours}h/day`}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* CONTROLS */}
-        <Paper elevation={0} sx={{ p: 3, mb: 4, background: COLORS.cardBg, borderRadius: 3, border: `1px solid #E2E8F0` }}>
-          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-            📋 Plan Your Study
-          </Typography>
-
-          {/* Subject Selection Card */}
-          <Card sx={{ mb: 3, borderRadius: 2, background: "#F0F9FF", border: `2px solid ${COLORS.secondary}` }}>
-            <CardContent>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                  {currentSubjectData?.emoji} {currentSubjectData?.fullName}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {currentSubjectData?.description}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-
-          {/* Form Controls */}
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={2.5}>
-              <FormControl fullWidth>
-                <InputLabel sx={{ fontSize: '0.9rem' }}>Subject</InputLabel>
-                <Select
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  sx={{ borderRadius: 2 }}
-                  label="Subject"
-                >
-                  {Object.entries(allSubjects).map(([key, data]) => (
-                    <MenuItem key={key} value={key}>
-                      {data.emoji} {data.fullName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={1.8}>
-              <TextField
-                label="Days"
-                type="number"
-                fullWidth
-                value={days}
-                onChange={(e) => setDays(Math.max(1, +e.target.value))}
-                inputProps={{ min: 1, max: 365 }}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={1.8}>
-              <TextField
-                label="Hours/Day"
-                type="number"
-                fullWidth
-                value={hours}
-                onChange={(e) => setHours(Math.max(0.5, +e.target.value))}
-                inputProps={{ min: 0.5, step: 0.5 }}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={2}>
-              <FormControl fullWidth>
-                <InputLabel sx={{ fontSize: '0.9rem' }}>Level</InputLabel>
-                <Select
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  sx={{ borderRadius: 2 }}
-                  label="Level"
-                >
-                  <MenuItem value="Beginner">🌱 Beginner</MenuItem>
-                  <MenuItem value="Intermediate">📈 Intermediate</MenuItem>
-                  <MenuItem value="Advanced">🚀 Advanced</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={2}>
-              <Button
-                fullWidth
-                variant="contained"
-                sx={{ background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondary})`, borderRadius: 2, fontWeight: 600, py: 1.5 }}
-                onClick={generatePlan}
+      <Box className="app-main">
+        <Box className="topbar">
+          <Box className="topbar-title">
+            <SchoolRoundedIcon />
+            <Typography variant="h6">AI Study Planner</Typography>
+          </Box>
+          <Box className="topbar-actions">
+            <IconButton
+              className="icon-btn"
+              onClick={() => setShowHistory(!showHistory)}
+            >
+              <HistoryRoundedIcon fontSize="small" />
+            </IconButton>
+            <IconButton className="icon-btn">
+              <Badge variant="dot" color="error">
+                <NotificationsNoneRoundedIcon />
+              </Badge>
+            </IconButton>
+            <Box className="user-pill">
+              <Avatar
+                sx={{
+                  width: 30,
+                  height: 30,
+                  bgcolor: "rgba(79, 140, 255, 0.6)",
+                  fontSize: "0.9rem",
+                }}
               >
-                🚀 Generate
-              </Button>
-            </Grid>
+                {(currentUserName || "U").charAt(0).toUpperCase()}
+              </Avatar>
+              <Typography variant="body2">{currentUserName}</Typography>
+              <KeyboardArrowDownRoundedIcon fontSize="small" />
+            </Box>
+            <Button
+              variant="text"
+              onClick={handleLogout}
+              sx={{ color: "rgba(226, 232, 240, 0.9)", textTransform: "none" }}
+            >
+              Logout
+            </Button>
+          </Box>
+        </Box>
 
-            <Grid item xs={12} md={2}>
-              <Button
-                fullWidth
-                variant="outlined"
-                sx={{ borderColor: COLORS.primary, color: COLORS.primary, borderRadius: 2, fontWeight: 600, py: 1.5 }}
-                onClick={() => setShowCustomDialog(true)}
-              >
-                ✨ Custom Plan
-              </Button>
-            </Grid>
-          </Grid>
-        </Paper>
+        <Box className="app-content">
+          {showHistory && (
+            <Card className="panel panel-light history-card">
+              <CardContent>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Your Study History
+                  </Typography>
+                  <Button size="small" onClick={() => setShowHistory(false)}>Close</Button>
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                {studyHistory.length === 0 ? (
+                  <Typography color="textSecondary">No study history yet. Start planning!</Typography>
+                ) : (
+                  <List>
+                    {studyHistory.map((entry) => (
+                      <ListItem key={entry.id}>
+                        <ListItemText
+                          primary={`${allSubjects[entry.subject]?.fullName || entry.subject} - ${entry.level}`}
+                          secondary={`${entry.createdAt} | ${entry.days} days x ${entry.hours}h/day`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-        {/* CUSTOM SUBJECT DIALOG */}
-        <Dialog open={showCustomDialog} onClose={() => setShowCustomDialog(false)} maxWidth="md" fullWidth>
-          <DialogTitle sx={{ fontWeight: 600, fontSize: '1.3rem', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondary})`, color: '#fff' }}>
-            ✨ Create Custom Study Plan
-          </DialogTitle>
-          <DialogContent sx={{ pt: 3 }}>
-            <TextField
-              fullWidth
-              label="Subject Name"
-              placeholder="e.g., Advanced Databases, Cloud Computing"
-              value={customSubjectName}
-              onChange={(e) => setCustomSubjectName(e.target.value)}
-              sx={{ mb: 3 }}
-            />
-
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-              📚 Add Topics by Level
+          <Box className="greeting-row" ref={homeRef}>
+            <Typography variant="h4" className="greeting">
+              {greeting}, {currentUserName} <span className="greeting-emoji">👋</span>
             </Typography>
-
-            <Tabs value={customLevelTab} onChange={(e, v) => setCustomLevelTab(v)} sx={{ mb: 2, borderBottom: `2px solid ${COLORS.secondary}` }}>
-              <Tab label="🌱 Beginner" sx={{ fontWeight: 600 }} />
-              <Tab label="📈 Intermediate" sx={{ fontWeight: 600 }} />
-              <Tab label="🚀 Advanced" sx={{ fontWeight: 600 }} />
-            </Tabs>
-
-            <Box sx={{ display: customLevelTab === 0 ? 'block' : 'none' }}>
-              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
-                💡 Add beginner-level topics (one per line)
-              </Typography>
-              <TextField
-                fullWidth
-                multiline
-                rows={5}
-                label="Beginner Topics"
-                placeholder="Topic 1&#10;Topic 2&#10;Topic 3"
-                value={customTopics.Beginner}
-                onChange={(e) => setCustomTopics({ ...customTopics, Beginner: e.target.value })}
-              />
-            </Box>
-
-            <Box sx={{ display: customLevelTab === 1 ? 'block' : 'none' }}>
-              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
-                💡 Add intermediate-level topics (one per line)
-              </Typography>
-              <TextField
-                fullWidth
-                multiline
-                rows={5}
-                label="Intermediate Topics"
-                placeholder="Topic 1&#10;Topic 2&#10;Topic 3"
-                value={customTopics.Intermediate}
-                onChange={(e) => setCustomTopics({ ...customTopics, Intermediate: e.target.value })}
-              />
-            </Box>
-
-            <Box sx={{ display: customLevelTab === 2 ? 'block' : 'none' }}>
-              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
-                💡 Add advanced-level topics (one per line)
-              </Typography>
-              <TextField
-                fullWidth
-                multiline
-                rows={5}
-                label="Advanced Topics"
-                placeholder="Topic 1&#10;Topic 2&#10;Topic 3"
-                value={customTopics.Advanced}
-                onChange={(e) => setCustomTopics({ ...customTopics, Advanced: e.target.value })}
-              />
-            </Box>
-
-            <Alert severity="info" sx={{ mt: 2 }}>
-              📌 Tip: Topics will appear exactly as you type them in your study plan!
-            </Alert>
-          </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => { setShowCustomDialog(false); setCustomTopics({ Beginner: "", Intermediate: "", Advanced: "" }); setCustomLevelTab(0); }}>Cancel</Button>
-            <Button variant="contained" sx={{ background: COLORS.primary }} onClick={handleCreateCustomSubject}>
+            <Button
+              className="cta-btn"
+              variant="contained"
+              sx={{
+                textTransform: "none",
+                boxShadow: "0 12px 24px rgba(34, 211, 238, 0.3)",
+                "&:hover": {
+                  boxShadow: "0 14px 28px rgba(34, 211, 238, 0.4)",
+                },
+              }}
+              onClick={() => setShowCustomDialog(true)}
+            >
               Create Custom Plan
             </Button>
-          </DialogActions>
-        </Dialog>
+          </Box>
 
-        {/* TIMER CARD */}
-        {plan.length > 0 && (
-          <Card sx={{ mb: 4, borderRadius: 3, background: `linear-gradient(135deg, ${COLORS.primary}10, ${COLORS.secondary}10)`, border: `2px solid ${COLORS.secondary}` }}>
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                    ⏱️ Study Timer
+          <Grid container spacing={3}>
+            <Grid item xs={12} lg={8}>
+              <Card className="panel panel-dark goal-card" sx={{ mb: 3 }}>
+                <CardContent>
+                  <Box className="goal-header">
+                    <Typography className="section-title">Today's Goal</Typography>
+                    <Box className="goal-indicator">
+                      <Box className={`status-dot ${plan.length ? "status-dot--active" : ""}`} />
+                      <Typography variant="caption">
+                        {plan.length ? "Active Plan" : "No Plan Yet"}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box className="metric-card">
+                        <Box className="metric-icon">
+                          <EventNoteRoundedIcon fontSize="small" />
+                        </Box>
+                        <Box>
+                          <Typography className="metric-label">Study Sessions</Typography>
+                          <Typography className="metric-value">{plan.length || days}</Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box className="metric-card">
+                        <Box className="metric-icon">
+                          <TimerRoundedIcon fontSize="small" />
+                        </Box>
+                        <Box>
+                          <Typography className="metric-label">Total Hours</Typography>
+                          <Typography className="metric-value">{displayHours.toFixed(1)}h</Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box className="metric-card">
+                        <Box className="metric-icon">
+                          <AutoGraphRoundedIcon fontSize="small" />
+                        </Box>
+                        <Box>
+                          <Typography className="metric-label">Productivity</Typography>
+                          <Typography className="metric-value">{productivityScore}%</Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box className="metric-card">
+                        <Box className="metric-icon">
+                          <CheckCircleIcon fontSize="small" />
+                        </Box>
+                        <Box>
+                          <Typography className="metric-label">Tasks Done</Typography>
+                          <Typography className="metric-value">
+                            {completedTopics}/{totalTopics || 0}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="caption" sx={{ color: "#cbd5f5" }}>
+                      Progress Snapshot
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={productivityScore}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        background: "rgba(255,255,255,0.1)",
+                        mt: 1,
+                        "& .MuiLinearProgress-bar": {
+                          background: "linear-gradient(135deg, #4f8cff, #22d3ee)",
+                        },
+                      }}
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
+
+              <Card className="panel panel-light plan-card" sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography className="section-title">Smart Study Plan</Typography>
+                  <Box sx={{ mt: 2 }}>
+                    {upcomingTopics.length > 0 ? (
+                      upcomingTopics.map((topic, index) => (
+                        <Box className="plan-list-item" key={`${topic.day}-${index}`}>
+                          <Box className="plan-row">
+                            <Box className="plan-dot" />
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {timeSlots[index % timeSlots.length]}
+                              </Typography>
+                              <Typography variant="caption" color="textSecondary">
+                                Day {topic.day}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <Typography variant="body2" color="textSecondary">
+                            {topic.name}
+                          </Typography>
+                        </Box>
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="textSecondary">
+                        Generate a plan to see your upcoming study sessions.
+                      </Typography>
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} lg={4}>
+              <Box ref={plannerRef}>
+                <Card className="panel panel-light planner-card" sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography className="section-title">Smart Study Planner</Typography>
+                  <Typography variant="body2" sx={{ color: "#475569", mt: 0.5, mb: 2 }}>
+                    Build a focused schedule around your goals.
                   </Typography>
-                  <Typography variant="h3" sx={{ fontWeight: 700, color: COLORS.primary, fontFamily: "monospace" }}>
-                    {formatTimer(timerSeconds)}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <FormControl fullWidth className="glass-input">
+                        <InputLabel>Subject</InputLabel>
+                        <Select
+                          value={subject}
+                          onChange={(e) => setSubject(e.target.value)}
+                          label="Subject"
+                        >
+                          {Object.entries(allSubjects).map(([key, data]) => (
+                            <MenuItem key={key} value={key}>
+                              {data.fullName}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="Exam Date"
+                        type="date"
+                        fullWidth
+                        className="glass-input"
+                        value={examDate}
+                        onChange={(e) => setExamDate(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="Duration (days)"
+                        type="number"
+                        fullWidth
+                        className="glass-input"
+                        value={days}
+                        onChange={(e) => setDays(Math.max(1, +e.target.value))}
+                        inputProps={{ min: 1, max: 365 }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="Daily study hours"
+                        type="number"
+                        fullWidth
+                        className="glass-input"
+                        value={hours}
+                        onChange={(e) => setHours(Math.max(0.5, +e.target.value))}
+                        inputProps={{ min: 0.5, step: 0.5 }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControl fullWidth className="glass-input">
+                        <InputLabel>Level</InputLabel>
+                        <Select
+                          value={level}
+                          onChange={(e) => setLevel(e.target.value)}
+                          label="Level"
+                        >
+                          <MenuItem value="Beginner">Beginner</MenuItem>
+                          <MenuItem value="Intermediate">Intermediate</MenuItem>
+                          <MenuItem value="Advanced">Advanced</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
                   <Button
+                    fullWidth
                     variant="contained"
-                    sx={{ background: timerActive ? COLORS.behind : COLORS.ahead, borderRadius: 2 }}
-                    startIcon={timerActive ? <PauseIcon /> : <PlayArrowIcon />}
-                    onClick={() => setTimerActive(!timerActive)}
+                    className="cta-btn"
+                    sx={{
+                      mt: 2,
+                      textTransform: "none",
+                      background: "linear-gradient(135deg, #4f8cff, #22d3ee)",
+                      "&:hover": {
+                        background: "linear-gradient(135deg, #3b7dff, #1fc9e5)",
+                      },
+                    }}
+                    onClick={generatePlan}
                   >
-                    {timerActive ? "Pause" : "Start"}
+                    Generate Study Plan
                   </Button>
                   <Button
+                    fullWidth
                     variant="outlined"
-                    sx={{ borderColor: COLORS.primary, color: COLORS.primary, borderRadius: 2 }}
-                    startIcon={<StopIcon />}
-                    onClick={() => { setTimerSeconds(0); setTimerActive(false); showSnackbar('⏱️ Timer reset'); }}
+                    sx={{
+                      mt: 1.5,
+                      borderColor: "rgba(15, 23, 42, 0.2)",
+                      color: "#0f172a",
+                      textTransform: "none",
+                    }}
+                    onClick={() => setShowCustomDialog(true)}
                   >
-                    Reset
+                    Create Custom Plan
                   </Button>
-                </Box>
+                </CardContent>
+              </Card>
               </Box>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* CHARTS */}
-        {plan.length > 0 && (
-          <>
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+              <Card className="panel panel-light analysis-card" sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography className="section-title">Skill Gap Analysis</Typography>
+                  <FormControl fullWidth className="glass-input" sx={{ mt: 2 }}>
+                    <InputLabel>Focus Track</InputLabel>
+                    <Select
+                      value={analysisTrack}
+                      onChange={(e) => setAnalysisTrack(e.target.value)}
+                      label="Focus Track"
+                    >
+                      <MenuItem value="Software Engineer">Software Engineer</MenuItem>
+                      <MenuItem value="Data Scientist">Data Scientist</MenuItem>
+                      <MenuItem value="Frontend Developer">Frontend Developer</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
+                    <Chip label={subject} className="chip-skill" />
+                    <Chip label={level} className="chip-skill" />
+                  </Box>
+                  <Typography variant="subtitle2" sx={{ mt: 2, fontWeight: 600, color: "#0f172a" }}>
+                    Missing Skills
+                  </Typography>
+                  <Box sx={{ mt: 1 }}>
+                    {missingSkills.length > 0 ? (
+                      missingSkills.map((skill) => (
+                        <Typography key={skill} variant="body2" sx={{ color: "#475569", mb: 0.5 }}>
+                          - {skill.split(" - ")[0]}
+                        </Typography>
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="textSecondary">
+                        Generate a plan to see suggested skills.
+                      </Typography>
+                    )}
+                  </Box>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    sx={{
+                      mt: 2,
+                      textTransform: "none",
+                      background: "linear-gradient(135deg, #2f7ef7, #23d5ee)",
+                      "&:hover": {
+                        background: "linear-gradient(135deg, #2a6ee0, #1bc3d8)",
+                      },
+                    }}
+                  >
+                    View Recommendations
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {plan.length > 0 && (
+                <Box ref={timerRef}>
+                  <Card className="panel panel-dark timer-card">
+                    <CardContent>
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                          Study Timer
+                        </Typography>
+                        <Typography variant="h3" sx={{ fontWeight: 700, color: "#e2e8f0", fontFamily: "monospace" }}>
+                          {formatTimer(timerSeconds)}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                        <Button
+                          variant="contained"
+                          className="cta-btn"
+                          startIcon={timerActive ? <PauseIcon /> : <PlayArrowIcon />}
+                          sx={{
+                            textTransform: "none",
+                            background: "linear-gradient(135deg, #4f8cff, #22d3ee)",
+                            "&:hover": {
+                              background: "linear-gradient(135deg, #3b7dff, #1fc9e5)",
+                            },
+                          }}
+                          onClick={() => setTimerActive(!timerActive)}
+                        >
+                          {timerActive ? "Pause" : "Start"}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          sx={{ borderColor: "rgba(226, 232, 240, 0.4)", color: "#e2e8f0", textTransform: "none" }}
+                          startIcon={<StopIcon />}
+                          onClick={() => { setTimerSeconds(0); setTimerActive(false); showSnackbar('Timer reset'); }}
+                        >
+                          Reset
+                        </Button>
+                      </Box>
+                    </Box>
+                    </CardContent>
+                  </Card>
+                </Box>
+              )}
+            </Grid>
+          </Grid>
+
+          {/* CUSTOM SUBJECT DIALOG */}
+          <Dialog open={showCustomDialog} onClose={() => setShowCustomDialog(false)} maxWidth="md" fullWidth>
+            <DialogTitle sx={{ fontWeight: 600, fontSize: '1.3rem', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondary})`, color: '#fff' }}>
+              Create Custom Study Plan
+            </DialogTitle>
+            <DialogContent sx={{ pt: 3 }}>
+              <TextField
+                fullWidth
+                label="Subject Name"
+                placeholder="e.g., Advanced Databases, Cloud Computing"
+                value={customSubjectName}
+                onChange={(e) => setCustomSubjectName(e.target.value)}
+                sx={{ mb: 3 }}
+              />
+
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Add Topics by Level
+              </Typography>
+
+              <Tabs value={customLevelTab} onChange={(e, v) => setCustomLevelTab(v)} sx={{ mb: 2, borderBottom: `2px solid ${COLORS.secondary}` }}>
+                <Tab label="Beginner" sx={{ fontWeight: 600 }} />
+                <Tab label="Intermediate" sx={{ fontWeight: 600 }} />
+                <Tab label="Advanced" sx={{ fontWeight: 600 }} />
+              </Tabs>
+
+              <Box sx={{ display: customLevelTab === 0 ? 'block' : 'none' }}>
+                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+                  Add beginner-level topics (one per line)
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={5}
+                  label="Beginner Topics"
+                  placeholder={"Topic 1\nTopic 2\nTopic 3"}
+                  value={customTopics.Beginner}
+                  onChange={(e) => setCustomTopics({ ...customTopics, Beginner: e.target.value })}
+                />
+              </Box>
+
+              <Box sx={{ display: customLevelTab === 1 ? 'block' : 'none' }}>
+                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+                  Add intermediate-level topics (one per line)
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={5}
+                  label="Intermediate Topics"
+                  placeholder={"Topic 1\nTopic 2\nTopic 3"}
+                  value={customTopics.Intermediate}
+                  onChange={(e) => setCustomTopics({ ...customTopics, Intermediate: e.target.value })}
+                />
+              </Box>
+
+              <Box sx={{ display: customLevelTab === 2 ? 'block' : 'none' }}>
+                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+                  Add advanced-level topics (one per line)
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={5}
+                  label="Advanced Topics"
+                  placeholder={"Topic 1\nTopic 2\nTopic 3"}
+                  value={customTopics.Advanced}
+                  onChange={(e) => setCustomTopics({ ...customTopics, Advanced: e.target.value })}
+                />
+              </Box>
+
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Tip: Topics will appear exactly as you type them in your study plan!
+              </Alert>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              <Button onClick={() => { setShowCustomDialog(false); setCustomTopics({ Beginner: "", Intermediate: "", Advanced: "" }); setCustomLevelTab(0); }}>Cancel</Button>
+              <Button variant="contained" sx={{ background: COLORS.primary }} onClick={handleCreateCustomSubject}>
+                Create Custom Plan
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {plan.length > 0 && (
+            <Grid container spacing={3} sx={{ mt: 1, mb: 4 }} ref={analyticsRef}>
               <Grid item xs={12} md={4}>
-                <Card sx={{ borderRadius: 3, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+                <Card className="panel panel-light progress-card">
                   <CardContent>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                      📊 Overall Progress
+                      Overall Progress
                     </Typography>
                     <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
                       <ResponsiveContainer width="100%" height={180}>
@@ -850,10 +1168,10 @@ function App() {
               </Grid>
 
               <Grid item xs={12} md={8}>
-                <Card sx={{ borderRadius: 3, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+                <Card className="panel panel-light progress-card">
                   <CardContent>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                      📈 Day-wise Progress
+                      Weekly Progress
                     </Typography>
                     <ResponsiveContainer width="100%" height={280}>
                       <BarChart data={barData}>
@@ -867,109 +1185,116 @@ function App() {
                 </Card>
               </Grid>
             </Grid>
-          </>
-        )}
+          )}
 
-        {/* DAY CARDS - ENHANCED */}
-        {plan.length > 0 && (
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: COLORS.primary }}>
-              📅 Your Study Plan ({days} Days)
-            </Typography>
-            <Grid container spacing={3}>
-              {plan.map((day, i) => {
-                const status = statusInfo(day);
-                return (
-                  <Grid item xs={12} key={i}>
-                    <Accordion defaultExpanded={i === 0} sx={{ borderRadius: 2, border: `2px solid ${status.color}20` }}>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ background: "#F9FAFB", py: 2 }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: "100%" }}>
-                          <Typography variant="h6" sx={{ fontWeight: 700, color: COLORS.primary, minWidth: 80 }}>
-                            Day {day.day}
-                          </Typography>
-                          <Box sx={{ flex: 1 }}>
-                            <LinearProgress variant="determinate" value={dayProgress(day)} sx={{ height: 8, borderRadius: 4, background: "#E2E8F0", "& .MuiLinearProgress-bar": { background: status.color } }} />
-                          </Box>
-                          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                            <Typography variant="caption" sx={{ fontWeight: 600, color: status.color }}>
-                              {dayProgress(day)}%
+          {plan.length > 0 && (
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: "#e2e8f0" }}>
+                Your Study Plan ({days} Days)
+              </Typography>
+              <Grid container spacing={3}>
+                {plan.map((day, i) => {
+                  const status = statusInfo(day);
+                  return (
+                    <Grid item xs={12} key={i}>
+                      <Accordion
+                        defaultExpanded={i === 0}
+                        sx={{
+                          borderRadius: 2,
+                          border: `2px solid ${status.color}25`,
+                          background: "rgba(255,255,255,0.9)",
+                        }}
+                      >
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ background: "rgba(248, 250, 252, 0.9)", py: 2 }}>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: "100%" }}>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: COLORS.primary, minWidth: 80 }}>
+                              Day {day.day}
                             </Typography>
-                            <Chip label={status.text} size="small" sx={{ background: status.color, color: "#fff" }} />
-                          </Box>
-                        </Box>
-                      </AccordionSummary>
-
-                      <AccordionDetails sx={{ pt: 3, background: "#FAFBFC" }}>
-                        {day.topics && day.topics.length > 0 ? (
-                          <>
-                            <List sx={{ p: 0 }}>
-                              {day.topics.map((topic, j) => (
-                                <ListItem key={j} sx={{ py: 1.5, borderBottom: "1px solid #E2E8F0", "&:last-child": { borderBottom: "none" }, transition: "all 0.2s", cursor: "pointer", "&:hover": { background: "#F0F9FF" } }} onClick={() => toggleSubtopic(i, j)}>
-                                  <ListItemIcon sx={{ minWidth: 40 }}>
-                                    {topic.completed ? (
-                                      <CheckCircleIcon sx={{ color: COLORS.ahead, fontSize: 24 }} />
-                                    ) : (
-                                      <RadioButtonUncheckedIcon sx={{ color: "#CBD5E1", fontSize: 24 }} />
-                                    )}
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primary={
-                                      <Typography sx={{ fontWeight: 600, textDecoration: topic.completed ? "line-through" : "none", color: topic.completed ? "#94A3B8" : "#1E293B" }}>
-                                        {topic.name}
-                                      </Typography>
-                                    }
-                                    secondary={
-                                      <Typography variant="caption" sx={{ color: "#64748B" }}>
-                                        ⏱️ {topic.hours}h • Click to mark complete
-                                      </Typography>
-                                    }
-                                  />
-                                </ListItem>
-                              ))}
-                            </List>
-                            <Box sx={{ mt: 2, pt: 2, borderTop: "2px solid #E2E8F0" }}>
-                              <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748B" }}>
-                                ✅ {day.topics.filter(t => t.completed).length} of {day.topics.length} completed
-                              </Typography>
+                            <Box sx={{ flex: 1 }}>
+                              <LinearProgress variant="determinate" value={dayProgress(day)} sx={{ height: 8, borderRadius: 4, background: "#E2E8F0", "& .MuiLinearProgress-bar": { background: status.color } }} />
                             </Box>
-                          </>
-                        ) : (
-                          <Typography color="textSecondary">No topics for this day</Typography>
-                        )}
-                      </AccordionDetails>
-                    </Accordion>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </Box>
-        )}
+                            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                              <Typography variant="caption" sx={{ fontWeight: 600, color: status.color }}>
+                                {dayProgress(day)}%
+                              </Typography>
+                              <Chip label={status.text} size="small" sx={{ background: status.color, color: "#fff" }} />
+                            </Box>
+                          </Box>
+                        </AccordionSummary>
 
-        {plan.length === 0 && (
-          <Paper elevation={0} sx={{ p: 8, textAlign: "center", borderRadius: 3, border: "2px dashed #CBD5E1" }}>
-            <Typography variant="h5" sx={{ color: "#64748B", fontWeight: 600, mb: 1 }}>
-              📚 No Plan Generated Yet
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Choose a subject and click "Generate Plan" to start learning!
-            </Typography>
-          </Paper>
-        )}
-      </Container>
+                        <AccordionDetails sx={{ pt: 3, background: "rgba(250, 251, 252, 0.9)" }}>
+                          {day.topics && day.topics.length > 0 ? (
+                            <>
+                              <List sx={{ p: 0 }}>
+                                {day.topics.map((topic, j) => (
+                                  <ListItem key={j} sx={{ py: 1.5, borderBottom: "1px solid #E2E8F0", "&:last-child": { borderBottom: "none" }, transition: "all 0.2s", cursor: "pointer", "&:hover": { background: "#F0F9FF" } }} onClick={() => toggleSubtopic(i, j)}>
+                                    <ListItemIcon sx={{ minWidth: 40 }}>
+                                      {topic.completed ? (
+                                        <CheckCircleIcon sx={{ color: COLORS.ahead, fontSize: 24 }} />
+                                      ) : (
+                                        <RadioButtonUncheckedIcon sx={{ color: "#CBD5E1", fontSize: 24 }} />
+                                      )}
+                                    </ListItemIcon>
+                                    <ListItemText
+                                      primary={
+                                        <Typography sx={{ fontWeight: 600, textDecoration: topic.completed ? "line-through" : "none", color: topic.completed ? "#94A3B8" : "#1E293B" }}>
+                                          {topic.name}
+                                        </Typography>
+                                      }
+                                      secondary={
+                                        <Typography variant="caption" sx={{ color: "#64748B" }}>
+                                          {topic.hours}h - Click to mark complete
+                                        </Typography>
+                                      }
+                                    />
+                                  </ListItem>
+                                ))}
+                              </List>
+                              <Box sx={{ mt: 2, pt: 2, borderTop: "2px solid #E2E8F0" }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748B" }}>
+                                  {day.topics.filter(t => t.completed).length} of {day.topics.length} completed
+                                </Typography>
+                              </Box>
+                            </>
+                          ) : (
+                            <Typography color="textSecondary">No topics for this day</Typography>
+                          )}
+                        </AccordionDetails>
+                      </Accordion>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </Box>
+          )}
 
-      {/* SNACKBAR */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert severity={snackbar.type} sx={{ borderRadius: 2 }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+          {plan.length === 0 && (
+            <Paper elevation={0} className="panel panel-light" sx={{ p: 8, textAlign: "center", border: "2px dashed rgba(148, 163, 184, 0.4)" }}>
+              <Typography variant="h5" sx={{ color: "#0f172a", fontWeight: 600, mb: 1 }}>
+                No Plan Generated Yet
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Choose a subject and click "Generate Study Plan" to start learning.
+              </Typography>
+            </Paper>
+          )}
+        </Box>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        >
+          <Alert severity={snackbar.type} sx={{ borderRadius: 2 }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Box>
+    </Box>
     </Box>
   );
+
 }
 
 export default App;
