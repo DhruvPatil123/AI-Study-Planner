@@ -4,7 +4,550 @@ import {
   Card,
   CardContent,
   TextField,
+  Button,import React, { useState } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  TextField,
   Button,
+  Typography,
+  Container,
+  Tab,
+  Tabs,
+  Alert,
+  InputAdornment,
+  IconButton,
+  Avatar,
+} from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+import SmartToyRoundedIcon from '@mui/icons-material/SmartToyRounded';
+import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
+import LockRoundedIcon from '@mui/icons-material/LockRounded';
+import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const COLORS = {
+  primary: '#4F8CFF',
+  secondary: '#22D3EE',
+  bg: 'radial-gradient(circle at 15% 20%, rgba(79,140,255,0.35), transparent 40%), radial-gradient(circle at 85% 25%, rgba(34,211,238,0.35), transparent 45%), linear-gradient(135deg, #0B1B3A 0%, #0F2A4F 60%, #123A6E 100%)',
+  card: 'rgba(15, 23, 42, 0.75)',
+  border: 'rgba(148, 163, 184, 0.25)',
+  textLight: '#E2E8F0',
+};
+
+const INPUT_SX = {
+  '& .MuiOutlinedInput-root': {
+    background: 'rgba(255,255,255,0.08)',
+    borderRadius: 2,
+    color: COLORS.textLight,
+    '& fieldset': {
+      borderColor: COLORS.border,
+    },
+    '&:hover fieldset': {
+      borderColor: 'rgba(148, 163, 184, 0.5)',
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: 'rgba(226, 232, 240, 0.7)',
+  },
+  '& .MuiFormHelperText-root': {
+    color: 'rgba(226, 232, 240, 0.7)',
+  },
+};
+
+
+
+function Auth({ onLoginSuccess }) {
+  const [tab, setTab] = useState(0);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // Validation functions
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateUsername = (username) => {
+    return username.length >= 3 && /^[a-zA-Z0-9_]+$/.test(username);
+  };
+
+  const validatePassword = (password) => {
+    return password.length >= 6;
+  };
+
+  const validateRegisterForm = () => {
+    const newErrors = {};
+
+    if (!username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (!validateUsername(username)) {
+      newErrors.username = 'Username must be 3+ chars, alphanumeric only';
+    }
+
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
+    } else if (!validatePassword(password)) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateLoginForm = () => {
+    const newErrors = {};
+
+    if (!username.trim()) {
+      newErrors.username = 'Username is required';
+    }
+
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    
+    if (!validateRegisterForm()) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+const res = await fetch(`${API_URL}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Registration failed');
+        return;
+      }
+
+      // Show success message
+      setSuccess('Account created successfully! Redirecting to login in 2 seconds...');
+      
+      // Reset form
+      setUsername('');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setErrors({});
+
+      // Redirect to login after 2 seconds
+      setTimeout(() => {
+        setTab(0);
+        setSuccess('');
+      }, 2000);
+    } catch (err) {
+      setError('Network error. Make sure backend is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    
+    if (!validateLoginForm()) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`${API_URL}/api/login`,{
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Login failed');
+        return;
+      }
+
+      // Save token and user info
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      // Call success callback
+      onLoginSuccess();
+    } catch (err) {
+      setError('Network error. Make sure backend is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTabChange = (e, value) => {
+    setTab(value);
+    setError('');
+    setSuccess('');
+    setErrors({});
+    setUsername('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+  };
+
+  return (
+    <Box className="auth-shell">
+      <Container maxWidth="sm">
+        <Card className="auth-card">
+          <Box className="auth-header">
+            <Avatar
+              sx={{
+                width: 48,
+                height: 48,
+                bgcolor: 'rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.3)',
+              }}
+            >
+              <SmartToyRoundedIcon />
+            </Avatar>
+            <Box sx={{ textAlign: 'left' }}>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  color: '#fff',
+                  mb: 0.5,
+                }}
+              >
+                AI Study Planner
+              </Typography>
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  color: 'rgba(255,255,255,0.9)',
+                  fontWeight: 500,
+                }}
+              >
+                Your Personalized Learning Journey
+              </Typography>
+            </Box>
+          </Box>
+
+          <CardContent className="auth-content">
+            <Tabs
+              value={tab}
+              onChange={handleTabChange}
+              variant="fullWidth"
+              sx={{
+                mb: 3,
+                '& .MuiTabs-indicator': {
+                  background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondary})`,
+                  height: 3,
+                },
+              }}
+            >
+              <Tab
+                label="Login"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  textTransform: 'capitalize',
+                  color: tab === 0 ? '#FFFFFF' : 'rgba(226,232,240,0.7)',
+                }}
+              />
+              <Tab
+                label="Register"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  textTransform: 'capitalize',
+                  color: tab === 1 ? '#FFFFFF' : 'rgba(226,232,240,0.7)',
+                }}
+              />
+            </Tabs>
+
+            {error && (
+              <Alert
+                severity="error"
+                sx={{
+                  mb: 3,
+                  borderRadius: 2,
+                  fontWeight: 500,
+                }}
+              >
+                {error}
+              </Alert>
+            )}
+
+            {success && (
+              <Alert
+                severity="success"
+                sx={{
+                  mb: 3,
+                  borderRadius: 2,
+                  fontWeight: 500,
+                }}
+              >
+                {success}
+              </Alert>
+            )}
+
+            {tab === 0 ? (
+              // LOGIN FORM
+              <form onSubmit={handleLogin}>
+                <TextField
+                  fullWidth
+                  label="Username or Email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  error={!!errors.username}
+                  helperText={errors.username}
+                  sx={{ mb: 2, ...INPUT_SX }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <PersonRoundedIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  placeholder="Enter your username"
+                />
+
+                <TextField
+                  fullWidth
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  error={!!errors.password}
+                  helperText={errors.password}
+                  sx={{ mb: 3, ...INPUT_SX }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockRoundedIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <Visibility /> : <VisibilityOff />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  placeholder="Enter your password"
+                />
+
+                <Button
+                  fullWidth
+                  variant="contained"
+                  sx={{
+                    background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondary})`,
+                    fontWeight: 600,
+                    py: 1.5,
+                    fontSize: '1rem',
+                    borderRadius: 2,
+                    textTransform: 'capitalize',
+                    '&:hover': {
+                      boxShadow: `0 8px 24px rgba(79, 140, 255, 0.35)`,
+                    },
+                  }}
+                  type="submit"
+                  disabled={loading}
+                >
+                  {loading ? 'Logging in...' : 'Login'}
+                </Button>
+              </form>
+            ) : (
+              // REGISTER FORM
+              <form onSubmit={handleRegister}>
+                <TextField
+                  fullWidth
+                  label="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  error={!!errors.username}
+                  helperText={errors.username || 'Min 3 chars, alphanumeric only'}
+                  sx={{ mb: 2, ...INPUT_SX }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <PersonRoundedIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  placeholder="Choose a username"
+                />
+
+                <TextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                  sx={{ mb: 2, ...INPUT_SX }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <EmailRoundedIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  placeholder="your.email@example.com"
+                />
+
+                <TextField
+                  fullWidth
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  error={!!errors.password}
+                  helperText={errors.password || 'Min 6 characters'}
+                  sx={{ mb: 2, ...INPUT_SX }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockRoundedIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <Visibility /> : <VisibilityOff />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  placeholder="Create a password"
+                />
+
+                <TextField
+                  fullWidth
+                  label="Confirm Password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  error={!!errors.confirmPassword}
+                  helperText={errors.confirmPassword}
+                  sx={{ mb: 3, ...INPUT_SX }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockRoundedIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          edge="end"
+                          size="small"
+                        >
+                          {showConfirmPassword ? <Visibility /> : <VisibilityOff />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  placeholder="Confirm your password"
+                />
+
+                <Button
+                  fullWidth
+                  variant="contained"
+                  sx={{
+                    background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondary})`,
+                    fontWeight: 600,
+                    py: 1.5,
+                    fontSize: '1rem',
+                    borderRadius: 2,
+                    textTransform: 'capitalize',
+                    '&:hover': {
+                      boxShadow: `0 8px 24px rgba(79, 140, 255, 0.35)`,
+                    },
+                  }}
+                  type="submit"
+                  disabled={loading}
+                >
+                  {loading ? 'Creating account...' : 'Register'}
+                </Button>
+              </form>
+            )}
+
+            <Box
+              sx={{
+                mt: 3,
+                p: 2,
+                background: 'rgba(255,255,255,0.08)',
+                borderRadius: 2,
+                border: `1px solid ${COLORS.border}`,
+              }}
+            >
+              <Typography variant="caption" sx={{ color: 'rgba(226,232,240,0.8)' }}>
+                Demo Credentials: Use username "demo" and password "123456".
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Typography
+          variant="caption"
+          sx={{
+            textAlign: 'center',
+            display: 'block',
+            mt: 3,
+            color: 'rgba(255,255,255,0.7)',
+          }}
+        >
+          Your data is secure and encrypted
+        </Typography>
+      </Container>
+    </Box>
+  );
+}
+
+export default Auth;
+
   Typography,
   Container,
   Tab,
@@ -514,3 +1057,4 @@ const res = await fetch(`${API_URL}/api/register`, {
 }
 
 export default Auth;
+
