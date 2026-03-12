@@ -71,14 +71,6 @@ Instead of static or pre-defined plans, the system dynamically adapts learning p
 - Python 3.8+
 - Git
 
-### Installation
-
-#### 1. Clone Repository
-```bash
-git clone https://github.com/Harshal-Bsys27/ai-study-planner.git
-cd ai-study-planner
-```
-
 #### 2. Backend Setup
 
 ```bash
@@ -326,4 +318,5 @@ For issues and questions:
 
 Made with dedication by Harshal Bsys27
 <!-- Pair programming commit -->
+
 
