@@ -2,12 +2,6 @@
 
 A full-stack web application for creating personalized study plans and tracking learning progress.
 
-**🔗[Live Demo](https://ai-study-planner-frontend.onrender.com)** 
-
-> ⚠️ Note: The application may take up to **30–60 seconds** to load on first visit due to free hosting (cold start on Render).
-
----
-
 ## 📌 Overview
 
 AI Study Planner is a complete full-stack application that helps students create customized study schedules, track their progress, and achieve their learning goals. With support for multiple subjects and difficulty levels, users can generate personalized study plans in seconds.
@@ -70,7 +64,9 @@ Instead of static or pre-defined plans, the system dynamically adapts learning p
 - Python 3.8+
 - Git
 
-#### 2. Backend Setup
+### Installation
+
+#### 1. Backend Setup
 
 ```bash
 cd backend
@@ -93,6 +89,17 @@ python app.py
 
 Backend runs on `http://localhost:5000`
 
+> **Run command:**
+> ```bash
+> # from project root
+> cd backend && python app.py
+> ```
+>
+> **Status check:**
+> ```bash
+> curl http://localhost:5000/health || echo "backend not responding"
+> ```
+
 #### 3. Frontend Setup (New Terminal)
 
 ```bash
@@ -106,6 +113,17 @@ npm run dev
 ```
 
 Frontend runs on `http://localhost:5173`
+
+> **Run command:**
+> ```bash
+> # from project root
+> cd frontend && npm run dev
+> ```
+>
+> **Status check:**
+> ```bash
+> curl http://localhost:5173 || echo "frontend not responding"
+> ```
 
 #### 4. Access Application
 Visit `http://localhost:5173`
@@ -317,6 +335,4 @@ For issues and questions:
 
 Made with dedication by Harshal Bsys27
 <!-- Pair programming commit -->
-
-
 
